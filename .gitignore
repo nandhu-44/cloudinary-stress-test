@@ -4,3 +4,4 @@ node_modules/
 .venv/
 urls.txt
 images/
+tests/
