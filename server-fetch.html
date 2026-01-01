@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server-Side Stress Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            color: #333;
+        }
+        p {
+            color: #666;
+        }
+        .input-group {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 10px;
+            width: 100%;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+        #status, #progress {
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        #status {
+            color: #28a745;
+        }
+        #logs {
+            max-height: 200px; 
+            overflow-y: auto; 
+            background: #fff; 
+            padding: 10px; 
+            margin-top: 10px; 
+            text-align: left; 
+            font-size: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Server-Side Cloudinary Stress Test</h1>
+    <p>The server will fetch the image. Your browser only receives status updates.</p>
+    
+    <div class="input-group">
+        <label>Image URL:</label>
+        <input type="text" id="urlInput" value="" placeholder="Enter Image URL here" style="width: 96%; margin-bottom: 10px;">
+        
+        <label>Count:</label>
+        <input type="number" id="countInput" value="100" style="width: 100px;">
+        
+        <button id="startBtn">Start Server Fetch</button>
+    </div>
+
+    <div id="status">Status: Ready</div>
+    <div id="progress">Progress: 0/0</div>
+    <div id="logs"></div>
+
+    <script>
+        const startBtn = document.getElementById('startBtn');
+        const statusDiv = document.getElementById('status');
+        const progressDiv = document.getElementById('progress');
+        const logsDiv = document.getElementById('logs');
+        let eventSource;
+
+        startBtn.addEventListener('click', () => {
+            const url = document.getElementById('urlInput').value;
+            const count = document.getElementById('countInput').value;
+
+            if (!url) {
+                alert('Please enter a URL');
+                return;
+            }
+            if (!count) return;
+
+            startBtn.disabled = true;
+            statusDiv.textContent = 'Status: Running...';
+            logsDiv.innerHTML = '';
+
+            if (eventSource) eventSource.close();
+
+            eventSource = new EventSource(`/stress-test?url=${encodeURIComponent(url)}&count=${count}`);
+
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+
+                if (data.type === 'start') {
+                    progressDiv.textContent = `Progress: 0/${data.total}`;
+                    log('Started job...');
+                } else if (data.type === 'progress') {
+                    progressDiv.textContent = `Progress: ${data.completed}/${data.total} (Errors: ${data.errors})`;
+                    if (data.error) {
+                        log(`Error: ${data.error}`);
+                    }
+                } else if (data.type === 'done') {
+                    statusDiv.textContent = 'Status: Completed';
+                    log('Job finished.');
+                    startBtn.disabled = false;
+                    eventSource.close();
+                }
+            };
+
+            eventSource.onerror = (err) => {
+                // EventSource often fires error on close, so check state
+                if (eventSource.readyState === EventSource.CLOSED) return;
+                
+                console.error('EventSource failed:', err);
+                statusDiv.textContent = 'Status: Connection Error (Check Server Console)';
+                log('Connection error occurred.');
+                startBtn.disabled = false;
+                eventSource.close();
+            };
+        });
+
+        function log(msg) {
+            const div = document.createElement('div');
+            div.textContent = `${new Date().toLocaleTimeString()} - ${msg}`;
+            logsDiv.prepend(div);
+        }
+    </script>
+</body>
+</html>
