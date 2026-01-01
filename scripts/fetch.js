@@ -43,7 +43,9 @@ fs.readFile(urlsFile, 'utf8', (err, data) => {
     for (let i = 0; i < urls.length; i++) {
       for (let j = 0; j < times; j++) {
         try {
-          const response = await axios.get(urls[i], { responseType: 'stream' });
+          // Append a unique query parameter to bypass caching
+          const uniqueUrl = `${urls[i]}${urls[i].includes('?') ? '&' : '?'}t=${Date.now()}_${Math.random()}`;
+          const response = await axios.get(uniqueUrl, { responseType: 'stream' });
           // Consume the stream to simulate full download
           await new Promise((resolve, reject) => {
             response.data.on('data', () => {});
