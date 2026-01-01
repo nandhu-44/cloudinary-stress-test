@@ -23,7 +23,7 @@ A tool to stress test Cloudinary by creating images of various sizes, uploading 
 1. Clone the repository:
 
    ```sh
-   git clone <repository-url>
+   git clone https://github.com/nandhu-44/cloudinary-stress-test
    cd cloudinary-stress-test
    ```
 
